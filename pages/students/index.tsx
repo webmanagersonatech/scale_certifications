@@ -10,7 +10,7 @@ import {
   getAllStudents,
   deleteStudent,
   Student,
-  StudentsResponse,
+
   generateStudentQR,
   regenerateStudentQR,
   downloadStudentQR
@@ -78,15 +78,24 @@ export default function StudentsPage() {
   };
 
   // Prepare data for export
-  const getExportData = useCallback(() => {
-    return students.map(student => ({
-      ...student,
-      date: student.date ? new Date(student.date).toLocaleDateString() : "",
-      subjectWiseScores: student.subjectWiseScores?.length || 0,
-      overallScore: student.overallScore?.toFixed(1) || 0,
-      qrCode: student.qrCode || "",
-    }));
-  }, [students]);
+ // Prepare data for export
+const getExportData = useCallback(() => {
+  return students.map((student) => ({
+    _id: student._id,
+    studentScaleId: student.studentScaleId,
+    name: student.name,
+    phone: student.phone,
+    email: student.email,
+    events: student.events,
+    date: student.date || "",
+    subjectWiseScores: student.subjectWiseScores?.length || 0,
+    overallScore: student.overallScore?.toFixed(1) || 0,
+    overallAttendance: student.overallAttendance,
+    qrCode: student.qrCode || "",
+    createdAt: student.createdAt,
+    updatedAt: student.updatedAt,
+  }));
+}, [students]);
 
   // Fetch students from API
   const fetchStudents = useCallback(async () => {
@@ -261,7 +270,7 @@ export default function StudentsPage() {
     {
       key: "studentScaleId",
       header: "Scale ID",
-      className: "font-mono text-xs",
+      className: "font-mono text-xs uppercase",
       sortable: true,
     },
     {
@@ -616,7 +625,7 @@ export default function StudentsPage() {
               <div>
                 <label className="text-xs text-gray-500 font-medium">Date</label>
                 <p className="text-sm text-gray-900">
-                  {new Date(selectedStudent.date).toLocaleDateString()}
+                  {selectedStudent.date}
                 </p>
               </div>
               <div>

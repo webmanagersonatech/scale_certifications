@@ -17,16 +17,64 @@ interface StudentFormProps {
   studentId?: string; // For editing
 }
 
-// Event options
+// Event options with dates
 const EVENT_OPTIONS = [
-  "FSP For MBA 2nd Year Students",
-  "SDP Business Analytics Workshop for 1st year MBA Students",
-  "FDP for Thiagarajar Polytechnic College",
-  "FDP for Sona College of Technology and Management",
-  "FDP for Sona Medical College of Yoga and Naturopath",
-  "SDP for Sona Medical College of Yoga and Naturopath",
-  "FDP for Management, MCA & Arts and Science"
+  {
+    id: 1,
+    name: "FSP For MBA 2nd Year Students",
+    startDate: "19-01-2026",
+    endDate: "10-04-2026",
+    dateRange: "19-01-2026 to 10-04-2026"
+  },
+  {
+    id: 2,
+    name: "SDP Business Analytics Workshop for 1st year MBA Students",
+    startDate: "16-04-2026",
+    endDate: "18-04-2026",
+    dateRange: "16-04-2026 to 18-04-2026"
+  },
+  {
+    id: 3,
+    name: "FDP for Thiagarajar Polytechnic College",
+    startDate: "20-04-2026",
+    endDate: "21-04-2026",
+    dateRange: "20-04-2026 to 21-04-2026"
+  },
+  {
+    id: 4,
+    name: "FDP for Sona College of Technology and Management",
+    startDate: "28-04-2026",
+    endDate: "29-04-2026",
+    dateRange: "28-04-2026 to 29-04-2026"
+  },
+  {
+    id: 5,
+    name: "FDP for Sona Medical College of Yoga and Naturopath",
+    startDate: "15-05-2026",
+    endDate: "16-05-2026",
+    dateRange: "15-05-2026 to 16-05-2026"
+  },
+  {
+    id: 6,
+    name: "SDP for Sona Medical College of Yoga and Naturopath",
+    startDate: "28-05-2026",
+    endDate: "30-05-2026",
+    dateRange: "28-05-2026 to 30-05-2026"
+  },
+  {
+    id: 7,
+    name: "FDP for Management, MCA & Arts and Science",
+    startDate: "04-06-2026",
+    endDate: "05-06-2026",
+    dateRange: "04-06-2026 to 05-06-2026"
+  }
 ];
+
+// Helper function to get event date range by event name
+const getEventDateRange = (eventName: string): string => {
+  const event = EVENT_OPTIONS.find(e => e.name === eventName);
+  return event ? event.dateRange : "";
+};
 
 // Searchable Single-Select Component
 interface SearchableSingleSelectProps {
@@ -88,7 +136,7 @@ function SearchableSingleSelect({
       }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlightedIndex(prev => 
+      setHighlightedIndex(prev =>
         prev < filteredOptions.length - 1 ? prev + 1 : prev
       );
     } else if (e.key === 'ArrowUp') {
@@ -134,11 +182,10 @@ function SearchableSingleSelect({
   return (
     <div ref={containerRef} className="relative w-full">
       <div
-        className={`w-full min-h-[42px] p-1 border rounded-lg focus-within:border-blue-900 focus-within:ring-2 focus-within:ring-blue-900/10 flex flex-wrap items-center gap-1 cursor-text ${
-          hasError 
-            ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500/10' 
+        className={`w-full min-h-[42px] p-1 border rounded-lg focus-within:border-blue-900 focus-within:ring-2 focus-within:ring-blue-900/10 flex flex-wrap items-center gap-1 cursor-text ${hasError
+            ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500/10'
             : 'border-gray-200'
-        } ${disabled ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+          } ${disabled ? 'bg-gray-50 cursor-not-allowed' : ''}`}
         onClick={() => {
           if (!disabled) {
             setIsOpen(true);
@@ -162,7 +209,7 @@ function SearchableSingleSelect({
             )}
           </span>
         )}
-        
+
         <input
           ref={inputRef}
           type="text"
@@ -193,9 +240,8 @@ function SearchableSingleSelect({
               filteredOptions.map((option, index) => (
                 <div
                   key={option}
-                  className={`px-3 py-2 text-sm rounded-md cursor-pointer flex items-center gap-2 transition-colors ${
-                    index === highlightedIndex ? 'bg-blue-50' : ''
-                  } ${isSelected(option) ? 'bg-blue-100' : ''} hover:bg-blue-50`}
+                  className={`px-3 py-2 text-sm rounded-md cursor-pointer flex items-center gap-2 transition-colors ${index === highlightedIndex ? 'bg-blue-50' : ''
+                    } ${isSelected(option) ? 'bg-blue-100' : ''} hover:bg-blue-50`}
                   onClick={() => selectOption(option)}
                   onMouseEnter={() => setHighlightedIndex(index)}
                 >
@@ -231,10 +277,10 @@ function SearchableSingleSelect({
   );
 }
 
-export default function StudentForm({ 
+export default function StudentForm({
   initialData,
-  onSubmit, 
-  onCancel, 
+  onSubmit,
+  onCancel,
   loading = false,
   isEdit = false,
   studentId
@@ -257,7 +303,7 @@ export default function StudentForm({
   const [newScore, setNewScore] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
-  
+
   const [errors, setErrors] = useState<{
     studentScaleId?: string;
     name?: string;
@@ -289,7 +335,7 @@ export default function StudentForm({
           setFetchLoading(true);
           const response = await getStudentById(studentId);
           const studentData = response.data;
-          
+
           if (studentData) {
             setFormData({
               studentScaleId: studentData.studentScaleId || "",
@@ -300,7 +346,7 @@ export default function StudentForm({
               trainerFeedback: studentData.trainerFeedback || "",
               subjectWiseScores: studentData.subjectWiseScores || [],
               events: studentData.events || "",
-              date: studentData.date ? new Date(studentData.date).toISOString().split('T')[0] : "",
+              date: studentData.date || "",
               overallScore: studentData.overallScore || 0,
               overallAttendance: studentData.overallAttendance || 0,
             });
@@ -323,7 +369,7 @@ export default function StudentForm({
           trainerFeedback: initialData.trainerFeedback || "",
           subjectWiseScores: initialData.subjectWiseScores || [],
           events: initialData.events || "",
-          date: initialData.date ? new Date(initialData.date).toISOString().split('T')[0] : "",
+          date: initialData.date || "",
           overallScore: initialData.overallScore || 0,
           overallAttendance: initialData.overallAttendance || 0,
         });
@@ -455,9 +501,24 @@ export default function StudentForm({
     setErrors(prev => ({ ...prev, [field]: error }));
   };
 
+  // Handle event selection - automatically set date
+  const handleEventChange = (selectedEvent: string | null) => {
+    const eventName = selectedEvent || "";
+    setFormData(prev => ({
+      ...prev,
+      events: eventName,
+      // Auto-populate date with the event's date range
+      date: eventName ? getEventDateRange(eventName) : ""
+    }));
+
+    setTouched(prev => ({ ...prev, events: true, date: true }));
+    const error = validateEvents(eventName);
+    setErrors(prev => ({ ...prev, events: error, date: error }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate all fields
     const newErrors: any = {};
     let hasError = false;
@@ -506,7 +567,7 @@ export default function StudentForm({
         trainerFeedback: formData.trainerFeedback,
         subjectWiseScores: formData.subjectWiseScores,
         events: formData.events,
-        date: formData.date,
+        date: formData.date, // Now contains the event date range
         overallScore: formData.overallScore,
         overallAttendance: formData.overallAttendance,
       };
@@ -523,31 +584,28 @@ export default function StudentForm({
       onSubmit(payload);
     } catch (error: any) {
       console.error("Submit error:", error);
-      
+
       // Handle different types of errors
       let errorMessage = `Failed to ${isEdit ? 'update' : 'create'} student.`;
-      
+
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         const status = error.response.status;
         const data = error.response.data;
-        
+
         if (status === 400) {
           errorMessage = data.message || "Invalid data provided. Please check your inputs.";
-          
-          // Handle field-specific errors from backend
+
           if (data.errors && typeof data.errors === 'object') {
             const backendErrors: any = {};
             let hasBackendError = false;
-            
+
             Object.keys(data.errors).forEach(key => {
               if (key in formData) {
                 backendErrors[key] = data.errors[key];
                 hasBackendError = true;
               }
             });
-            
+
             if (hasBackendError) {
               setErrors(prev => ({ ...prev, ...backendErrors }));
               setTouched(prev => {
@@ -571,13 +629,11 @@ export default function StudentForm({
           errorMessage = data.message || `Server error (${status}). Please try again.`;
         }
       } else if (error.request) {
-        // The request was made but no response was received
         errorMessage = "No response from server. Please check your internet connection.";
       } else {
-        // Something happened in setting up the request that triggered an Error
         errorMessage = error.message || "An unexpected error occurred.";
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -606,7 +662,7 @@ export default function StudentForm({
       toast.error("This subject is already added.");
       return;
     }
-    
+
     setFormData(prev => ({
       ...prev,
       subjectWiseScores: [...prev.subjectWiseScores, {
@@ -614,15 +670,15 @@ export default function StudentForm({
         score: parseFloat(newScore)
       }]
     }));
-    
+
     setNewSubject("");
     setNewScore("");
     setErrors(prev => ({ ...prev, newSubject: undefined, newScore: undefined }));
-    
+
     if (errors.subjectWiseScores) {
       setErrors(prev => ({ ...prev, subjectWiseScores: undefined }));
     }
-    
+
     toast.success("Subject score added successfully!");
   };
 
@@ -631,7 +687,7 @@ export default function StudentForm({
       ...prev,
       subjectWiseScores: prev.subjectWiseScores.filter((_, i) => i !== index)
     }));
-    
+
     if (formData.subjectWiseScores.length === 1) {
       setErrors(prev => ({ ...prev, subjectWiseScores: undefined }));
     }
@@ -648,10 +704,10 @@ export default function StudentForm({
         setErrors(prev => ({ ...prev, subjectWiseScores: undefined }));
       }
     }
-    
+
     setFormData(prev => ({
       ...prev,
-      subjectWiseScores: prev.subjectWiseScores.map((subj, i) => 
+      subjectWiseScores: prev.subjectWiseScores.map((subj, i) =>
         i === index ? { ...subj, [field]: field === 'score' ? parseFloat(value) : value } : subj
       )
     }));
@@ -681,11 +737,10 @@ export default function StudentForm({
             value={formData.studentScaleId}
             onChange={(e) => handleFieldChange('studentScaleId', e.target.value)}
             onBlur={() => handleBlur('studentScaleId')}
-            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${
-              touched.studentScaleId && errors.studentScaleId 
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' 
+            className={`w-full px-3 uppercase  py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.studentScaleId && errors.studentScaleId
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
                 : 'border-gray-200'
-            }`}
+              }`}
             required
             disabled={loading || isSubmitting}
           />
@@ -702,11 +757,10 @@ export default function StudentForm({
             value={formData.name}
             onChange={(e) => handleFieldChange('name', e.target.value)}
             onBlur={() => handleBlur('name')}
-            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${
-              touched.name && errors.name 
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' 
+            className={`w-full px-3 py-2 text-sm border uppercase rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.name && errors.name
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
                 : 'border-gray-200'
-            }`}
+              }`}
             required
             disabled={loading || isSubmitting}
           />
@@ -729,11 +783,10 @@ export default function StudentForm({
               handleFieldChange('phone', value);
             }}
             onBlur={() => handleBlur('phone')}
-            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${
-              touched.phone && errors.phone 
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' 
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.phone && errors.phone
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
                 : 'border-gray-200'
-            }`}
+              }`}
             placeholder="Enter 10 digit phone number"
             required
             disabled={loading || isSubmitting}
@@ -753,11 +806,10 @@ export default function StudentForm({
             value={formData.email}
             onChange={(e) => handleFieldChange('email', e.target.value)}
             onBlur={() => handleBlur('email')}
-            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${
-              touched.email && errors.email 
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' 
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.email && errors.email
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
                 : 'border-gray-200'
-            }`}
+              }`}
             placeholder="Enter valid email address"
             required
             disabled={loading || isSubmitting}
@@ -774,40 +826,38 @@ export default function StudentForm({
           Event * (Select one event)
         </label>
         <SearchableSingleSelect
-          options={EVENT_OPTIONS}
+          options={EVENT_OPTIONS.map(e => e.name)}
           selected={formData.events || null}
-          onChange={(selected) => {
-            handleFieldChange('events', selected || '');
-          }}
+          onChange={handleEventChange}
           onBlur={() => handleBlur('events')}
           placeholder="Search and select an event..."
           error={errors.events}
           touched={touched.events}
           disabled={loading || isSubmitting}
         />
+        {formData.events && formData.date && (
+          <p className="mt-1 text-xs text-green-600">
+            Event Date: <span className="font-medium">{formData.date}</span>
+          </p>
+        )}
       </div>
 
-      {/* Date */}
+      {/* Date - Now read-only and auto-populated from event */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Date *
+          Event Date Range * (Auto-populated from selected event)
         </label>
         <input
-          type="date"
+          type="text"
           value={formData.date}
-          onChange={(e) => handleFieldChange('date', e.target.value)}
-          onBlur={() => handleBlur('date')}
-          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${
-            touched.date && errors.date 
-              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' 
-              : 'border-gray-200'
-          }`}
-          required
-          disabled={loading || isSubmitting}
+          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none cursor-not-allowed"
+          disabled
+          placeholder="Select an event to auto-populate date"
         />
         {touched.date && errors.date && (
           <p className="mt-1 text-xs text-red-600">{errors.date}</p>
         )}
+        <p className="mt-1 text-xs text-gray-500">This field is automatically populated when you select an event</p>
       </div>
 
       {/* Subject-wise Scores */}
@@ -815,7 +865,7 @@ export default function StudentForm({
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Subject-wise Scores * (Score: 0-100)
         </label>
-        
+
         <div className="flex gap-2 mb-3">
           <div className="flex-1">
             <input
@@ -828,9 +878,8 @@ export default function StudentForm({
                   setErrors(prev => ({ ...prev, newSubject: undefined }));
                 }
               }}
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${
-                errors.newSubject ? 'border-red-500' : 'border-gray-200'
-              }`}
+              className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${errors.newSubject ? 'border-red-500' : 'border-gray-200'
+                }`}
               disabled={loading || isSubmitting}
             />
             {errors.newSubject && (
@@ -848,9 +897,8 @@ export default function StudentForm({
                   setErrors(prev => ({ ...prev, newScore: undefined }));
                 }
               }}
-              className={`w-24 px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${
-                errors.newScore ? 'border-red-500' : 'border-gray-200'
-              }`}
+              className={`w-24 px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${errors.newScore ? 'border-red-500' : 'border-gray-200'
+                }`}
               min="0"
               max="100"
               disabled={loading || isSubmitting}
@@ -910,8 +958,7 @@ export default function StudentForm({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Overall Score (Auto-calculated)
           </label>
-          <input
-            type="number"
+          <input type="number"
             value={formData.overallScore}
             className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none"
             min="0"
@@ -930,11 +977,10 @@ export default function StudentForm({
             value={formData.overallAttendance}
             onChange={(e) => handleFieldChange('overallAttendance', parseFloat(e.target.value) || 0)}
             onBlur={() => handleBlur('overallAttendance')}
-            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${
-              touched.overallAttendance && errors.overallAttendance 
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' 
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.overallAttendance && errors.overallAttendance
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
                 : 'border-gray-200'
-            }`}
+              }`}
             min="0"
             max="100"
             step="0.01"

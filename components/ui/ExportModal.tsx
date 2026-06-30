@@ -28,7 +28,7 @@ export function ExportModal({
   includeQR = false,
   onIncludeQRChange,
 }: ExportModalProps) {
-  const [selectedFormat, setSelectedFormat] = useState<"csv" | "excel">("csv");
+  const [selectedFormat, setSelectedFormat] = useState<"csv" | "excel">("excel");
   const [exporting, setExporting] = useState(false);
   const [includeQRInExport, setIncludeQRInExport] = useState(includeQR);
 
@@ -358,13 +358,7 @@ const isValidQR = (qrValue: string): boolean => {
   };
 
   const formatOptions = [
-    {
-      id: "csv",
-      label: "CSV Format",
-      icon: FileText,
-      description: "Comma-separated values - compatible with all spreadsheet software",
-      color: "blue",
-    },
+   
     {
       id: "excel",
       label: "Excel Format",
@@ -389,7 +383,7 @@ const isValidQR = (qrValue: string): boolean => {
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Select Export Format
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             {formatOptions.map((option) => {
               const Icon = option.icon;
               const isSelected = selectedFormat === option.id;
@@ -397,7 +391,7 @@ const isValidQR = (qrValue: string): boolean => {
                 <button
                   key={option.id}
                   type="button"
-                  onClick={() => setSelectedFormat(option.id as "csv" | "excel")}
+                  onClick={() => setSelectedFormat(option.id as "excel" | "excel")}
                   className={`p-4 rounded-xl border-2 transition-all text-left ${
                     isSelected
                       ? `border-${option.color}-600 bg-${option.color}-50 ring-2 ring-${option.color}-600/20`
