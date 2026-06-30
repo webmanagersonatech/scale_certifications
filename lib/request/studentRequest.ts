@@ -92,6 +92,18 @@ export async function createStudent(data: Omit<Student, '_id' | 'createdAt' | 'u
     );
   }
 }
+
+// In your studentRequest.ts
+export async function getStudentByScaleId(studentScaleId: string) {
+  try {
+    const response = await api.get<StudentResponse>(`/students/certification/${studentScaleId}`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch student by Scale ID."
+    );
+  }
+}
 // Generate QR code for a student
 export const generateStudentQR = async (studentId: string): Promise<{ success: boolean; qrCode: string }> => {
   try {
