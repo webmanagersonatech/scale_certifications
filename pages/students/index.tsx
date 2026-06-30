@@ -4,18 +4,22 @@ import { DataTable } from "@/components/ui/DataTable";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { ExportModal } from "@/components/ui/ExportModal";
-import { Plus, Pencil, Trash2, Eye, Download, Filter, RefreshCw, Search, QrCode } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Download, Filter, RefreshCw, Search, QrCode, Calendar } from "lucide-react";
 import StudentForm from "@/components/forms/studentform";
 import {
   getAllStudents,
   deleteStudent,
   Student,
-
   generateStudentQR,
   regenerateStudentQR,
   downloadStudentQR
 } from "@/lib/request/studentRequest";
 import { toast } from "react-toastify";
+
+interface DistinctEvent {
+  eventName: string;
+  dateRange: string;
+}
 
 export default function StudentsPage() {
   // State management
@@ -32,6 +36,7 @@ export default function StudentsPage() {
   const [qrLoading, setQrLoading] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [distinctEvents, setDistinctEvents] = useState<DistinctEvent[]>([]);
   const [pagination, setPagination] = useState({
     totalDocs: 0,
     totalPages: 0,
@@ -41,7 +46,8 @@ export default function StudentsPage() {
     hasPrevPage: false,
   });
   const [filters, setFilters] = useState({
-    event: "all", // Changed from "course" to "event"
+    event: "all",
+    dateRange: "", // Add date range filter
   });
 
   const PAGE_SIZE = 10;
@@ -57,8 +63,6 @@ export default function StudentsPage() {
     "Overall Score",
     "Overall Attendance",
     "Subjects Count",
-    "Student Feedback",
-    "Trainer Feedback",
     "QR Code"
   ];
 
@@ -72,40 +76,37 @@ export default function StudentsPage() {
     overallScore: "Overall Score",
     overallAttendance: "Overall Attendance",
     subjectWiseScores: "Subjects Count",
-    studentFeedback: "Student Feedback",
-    trainerFeedback: "Trainer Feedback",
     qrCode: "QR Code"
   };
 
   // Prepare data for export
- // Prepare data for export
-const getExportData = useCallback(() => {
-  return students.map((student) => ({
-    _id: student._id,
-    studentScaleId: student.studentScaleId,
-    name: student.name,
-    phone: student.phone,
-    email: student.email,
-    events: student.events,
-    date: student.date || "",
-    subjectWiseScores: student.subjectWiseScores?.length || 0,
-    overallScore: student.overallScore?.toFixed(1) || 0,
-    overallAttendance: student.overallAttendance,
-    qrCode: student.qrCode || "",
-    createdAt: student.createdAt,
-    updatedAt: student.updatedAt,
-  }));
-}, [students]);
+  const getExportData = useCallback(() => {
+    return students.map((student) => ({
+      _id: student._id,
+      studentScaleId: student.studentScaleId,
+      name: student.name,
+      phone: student.phone,
+      email: student.email,
+      events: student.events,
+      date: student.date || "",
+      subjectWiseScores: student.subjectWiseScores?.length || 0,
+      overallScore: student.overallScore?.toFixed(1) || 0,
+      overallAttendance: student.overallAttendance,
+      qrCode: student.qrCode || "",
+      createdAt: student.createdAt,
+      updatedAt: student.updatedAt,
+    }));
+  }, [students]);
 
   // Fetch students from API
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getAllStudents({
+      const response:any = await getAllStudents({
         page: currentPage,
         limit: PAGE_SIZE,
         search: search,
-        event: filters.event !== "all" ? filters.event : undefined, // Add event filter
+        event: filters.event !== "all" ? filters.event : undefined,
       });
 
       if (response.success) {
@@ -118,6 +119,10 @@ const getExportData = useCallback(() => {
           hasNextPage: response.students.hasNextPage,
           hasPrevPage: response.students.hasPrevPage,
         });
+        // Set distinct events from backend response
+        if (response.distinctEvents) {
+          setDistinctEvents(response.distinctEvents);
+        }
       }
     } catch (error: any) {
       console.error("Failed to fetch students:", error);
@@ -125,7 +130,7 @@ const getExportData = useCallback(() => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, search, filters.event]); // Add filters.event to dependencies
+  }, [currentPage, search, filters.event]);
 
   // Load students on mount and when dependencies change
   useEffect(() => {
@@ -233,7 +238,10 @@ const getExportData = useCallback(() => {
 
   const handleResetFilters = useCallback(() => {
     setSearch("");
-    setFilters({ event: "all" }); // Reset event filter
+    setFilters({ 
+      event: "all",
+      dateRange: "" 
+    });
     setCurrentPage(1);
   }, []);
 
@@ -243,11 +251,11 @@ const getExportData = useCallback(() => {
     setSelectedStudent(null);
   }, []);
 
-  // Get unique events for filters from API data
-  const uniqueEvents = useMemo(() => {
-    const events = students.map(s => s.events || '').filter(Boolean);
-    return ["all", ...new Set(events)];
-  }, [students]);
+  // Get unique date ranges for filter
+  const uniqueDateRanges = useMemo(() => {
+    const dates = distinctEvents.map(e => e.dateRange).filter(Boolean);
+    return ["all", ...new Set(dates)];
+  }, [distinctEvents]);
 
   // Column definitions
   const columns: any = [
@@ -279,6 +287,16 @@ const getExportData = useCallback(() => {
       sortable: true,
       render: (value: string) => (
         <span className="text-sm text-gray-700 truncate max-w-[200px] block" title={value}>
+          {value || 'N/A'}
+        </span>
+      ),
+    },
+    {
+      key: "date",
+      header: "Date Range",
+      sortable: true,
+      render: (value: string) => (
+        <span className="text-sm text-gray-600 whitespace-nowrap">
           {value || 'N/A'}
         </span>
       ),
@@ -442,15 +460,42 @@ const getExportData = useCallback(() => {
           <select
             value={filters.event}
             onChange={(e) => {
-              setFilters({ event: e.target.value });
+              setFilters({ 
+                ...filters, 
+                event: e.target.value 
+              });
               setCurrentPage(1);
             }}
             className="text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 transition text-gray-600 min-w-[200px] max-w-[300px]"
           >
             <option value="all">All Events</option>
-            {uniqueEvents.filter(e => e !== "all").map(event => (
-              <option key={event} value={event} title={event}>
-                {event.length > 30 ? `${event.substring(0, 30)}...` : event}
+            {distinctEvents.map((event) => (
+              <option key={event.eventName} value={event.eventName} title={`${event.eventName} (${event.dateRange})`}>
+                {event.eventName.length > 30 ? `${event.eventName.substring(0, 30)}...` : event.eventName}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-gray-400" />
+            <span className="text-sm font-medium text-gray-600">Date Range:</span>
+          </div>
+
+          <select
+            value={filters.dateRange}
+            onChange={(e) => {
+              setFilters({ 
+                ...filters, 
+                dateRange: e.target.value 
+              });
+              setCurrentPage(1);
+            }}
+            className="text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 transition text-gray-600 min-w-[180px]"
+          >
+            <option value="all">All Dates</option>
+            {uniqueDateRanges.filter(d => d !== "all").map((date) => (
+              <option key={date} value={date}>
+                {date}
               </option>
             ))}
           </select>
@@ -464,6 +509,7 @@ const getExportData = useCallback(() => {
           </button>
         </div>
 
+     
         {/* Data Table */}
         <DataTable
           columns={columns}
@@ -505,6 +551,8 @@ const getExportData = useCallback(() => {
               <div className="text-sm text-gray-500 text-center">
                 <p>Student: <span className="font-semibold text-gray-700">{selectedStudent?.name}</span></p>
                 <p>Scale ID: <span className="font-mono text-gray-700">{selectedStudent?.studentScaleId}</span></p>
+                <p>Event: <span className="font-medium text-gray-700">{selectedStudent?.events}</span></p>
+                <p>Date: <span className="font-medium text-gray-700">{selectedStudent?.date}</span></p>
               </div>
 
               <div className="flex gap-3 mt-2">
@@ -623,7 +671,7 @@ const getExportData = useCallback(() => {
                 <p className="text-sm text-gray-900">{selectedStudent.events}</p>
               </div>
               <div>
-                <label className="text-xs text-gray-500 font-medium">Date</label>
+                <label className="text-xs text-gray-500 font-medium">Date Range</label>
                 <p className="text-sm text-gray-900">
                   {selectedStudent.date}
                 </p>

@@ -200,12 +200,14 @@ export async function getAllStudents({
   page = 1,
   limit = 10,
   search = "",
-  event = "", // Add event parameter
+  event = "",
+  dateRange = "", // Add dateRange parameter
 }: {
   page?: number;
   limit?: number;
   search?: string;
   event?: string;
+  dateRange?: string; // Add dateRange to type
 }) {
   try {
     const response = await api.get<StudentsResponse>("/students", {
@@ -213,7 +215,8 @@ export async function getAllStudents({
         page,
         limit,
         search: search.trim(),
-        event: event || undefined, // Pass event filter
+        event: event || undefined,
+        dateRange: dateRange || undefined, // Pass dateRange filter
       },
     });
 
