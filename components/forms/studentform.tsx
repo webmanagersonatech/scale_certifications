@@ -70,6 +70,21 @@ const EVENT_OPTIONS = [
   }
 ];
 
+// Specialisation options
+const SPECIALISATION_OPTIONS = [
+  "Marketing",
+  "Finance",
+  "HR/Operations",
+  "Analytics"
+];
+
+// Badge options
+const BADGE_OPTIONS = [
+  { value: "gold", label: "🥇 Gold", color: "bg-yellow-500" },
+  { value: "silver", label: "🥈 Silver", color: "bg-gray-400" },
+  { value: "bronze", label: "🥉 Bronze", color: "bg-amber-600" }
+];
+
 // Helper function to get event date range by event name
 const getEventDateRange = (eventName: string): string => {
   const event = EVENT_OPTIONS.find(e => e.name === eventName);
@@ -183,8 +198,8 @@ function SearchableSingleSelect({
     <div ref={containerRef} className="relative w-full">
       <div
         className={`w-full min-h-[42px] p-1 border rounded-lg focus-within:border-blue-900 focus-within:ring-2 focus-within:ring-blue-900/10 flex flex-wrap items-center gap-1 cursor-text ${hasError
-            ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500/10'
-            : 'border-gray-200'
+          ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500/10'
+          : 'border-gray-200'
           } ${disabled ? 'bg-gray-50 cursor-not-allowed' : ''}`}
         onClick={() => {
           if (!disabled) {
@@ -297,12 +312,18 @@ export default function StudentForm({
     date: "",
     overallScore: 0,
     overallAttendance: 0,
+    specialisation: "",
+    badge: "",
+    photo: "", // Base64 string
+    aadharNumber: "" // Optional field
   });
 
   const [newSubject, setNewSubject] = useState("");
   const [newScore, setNewScore] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [errors, setErrors] = useState<{
     studentScaleId?: string;
@@ -315,6 +336,10 @@ export default function StudentForm({
     overallAttendance?: string;
     newSubject?: string;
     newScore?: string;
+    specialisation?: string;
+    badge?: string;
+    photo?: string;
+    aadharNumber?: string;
   }>({});
 
   const [touched, setTouched] = useState<{
@@ -325,6 +350,10 @@ export default function StudentForm({
     events?: boolean;
     date?: boolean;
     overallAttendance?: boolean;
+    specialisation?: boolean;
+    badge?: boolean;
+    photo?: boolean;
+    aadharNumber?: boolean;
   }>({});
 
   // Fetch student data for editing
@@ -349,7 +378,15 @@ export default function StudentForm({
               date: studentData.date || "",
               overallScore: studentData.overallScore || 0,
               overallAttendance: studentData.overallAttendance || 0,
+              specialisation: studentData.specialisation || "",
+              badge: studentData.badge || "",
+              photo: studentData.photo || "",
+              aadharNumber: studentData.aadharNumber || ""
             });
+
+            if (studentData.photo) {
+              setPhotoPreview(studentData.photo);
+            }
           }
         } catch (error: any) {
           console.error("Error fetching student data:", error);
@@ -372,7 +409,15 @@ export default function StudentForm({
           date: initialData.date || "",
           overallScore: initialData.overallScore || 0,
           overallAttendance: initialData.overallAttendance || 0,
+          specialisation: initialData.specialisation || "",
+          badge: initialData.badge || "",
+          photo: initialData.photo || "",
+          aadharNumber: initialData.aadharNumber || ""
         });
+
+        if (initialData.photo) {
+          setPhotoPreview(initialData.photo);
+        }
       }
     };
 
@@ -398,9 +443,9 @@ export default function StudentForm({
 
   // Validation functions
   const validatePhone = (phone: string): string | undefined => {
-    const phoneRegex = /^[0-9]{10}$/;
+    const phoneRegex = /^[6-9][0-9]{9}$/; // Starts with 6,7,8,9 and exactly 10 digits
     if (!phone) return "Phone number is required";
-    if (!phoneRegex.test(phone)) return "Phone number must be exactly 10 digits";
+    if (!phoneRegex.test(phone)) return "Phone number must start with 6,7,8,or 9 and be exactly 10 digits";
     return undefined;
   };
 
@@ -412,8 +457,10 @@ export default function StudentForm({
   };
 
   const validateName = (name: string): string | undefined => {
+    const nameRegex = /^[a-zA-Z\s]+$/; // Only letters and spaces
     if (!name) return "Full name is required";
     if (name.trim().length < 2) return "Name must be at least 2 characters";
+    if (!nameRegex.test(name)) return "Name must contain only letters and spaces";
     return undefined;
   };
 
@@ -457,6 +504,29 @@ export default function StudentForm({
     return undefined;
   };
 
+  const validateSpecialisation = (value: string): string | undefined => {
+    if (!value) return "Please select a specialisation";
+    return undefined;
+  };
+
+  const validateBadge = (value: string): string | undefined => {
+    if (!value) return "Please select a badge";
+    return undefined;
+  };
+
+  const validatePhoto = (value: string): string | undefined => {
+    if (!value) return "Please upload a photo";
+    return undefined;
+  };
+
+  const validateAadharNumber = (value: string): string | undefined => {
+    const aadharRegex = /^[0-9]{12}$/;
+    if (value && !aadharRegex.test(value)) {
+      return "Aadhar number must be exactly 12 digits";
+    }
+    return undefined;
+  };
+
   const validateField = (field: string, value: any) => {
     let error;
     switch (field) {
@@ -480,6 +550,18 @@ export default function StudentForm({
         break;
       case 'overallAttendance':
         error = validateOverallAttendance(value);
+        break;
+      case 'specialisation':
+        error = validateSpecialisation(value);
+        break;
+      case 'badge':
+        error = validateBadge(value);
+        break;
+      case 'photo':
+        error = validatePhoto(value);
+        break;
+      case 'aadharNumber':
+        error = validateAadharNumber(value);
         break;
       default:
         break;
@@ -507,13 +589,90 @@ export default function StudentForm({
     setFormData(prev => ({
       ...prev,
       events: eventName,
-      // Auto-populate date with the event's date range
       date: eventName ? getEventDateRange(eventName) : ""
     }));
 
     setTouched(prev => ({ ...prev, events: true, date: true }));
     const error = validateEvents(eventName);
     setErrors(prev => ({ ...prev, events: error, date: error }));
+  };
+
+  // Handle photo upload with compression to 100KB
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size
+    if (file.size > 1024 * 1024) { // 1MB max for compression
+      toast.error("File is too large. Maximum size is 1MB.");
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64String = event.target?.result as string;
+
+      // Compress image to ~100KB
+      compressImage(base64String, 100, (compressedBase64) => {
+        setFormData(prev => ({ ...prev, photo: compressedBase64 }));
+        setPhotoPreview(compressedBase64);
+        setTouched(prev => ({ ...prev, photo: true }));
+        const error = validatePhoto(compressedBase64);
+        setErrors(prev => ({ ...prev, photo: error }));
+        toast.success("Photo uploaded successfully!");
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Compress image to target size
+  const compressImage = (base64String: string, targetSizeKB: number, callback: (compressed: string) => void) => {
+    const img = new Image();
+    img.src = base64String;
+    img.onload = () => {
+      let quality = 0.9;
+      let canvas = document.createElement('canvas');
+      let ctx = canvas.getContext('2d');
+
+      // Calculate dimensions to maintain aspect ratio
+      let width = img.width;
+      let height = img.height;
+      const maxDimension = 800;
+
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = (height / width) * maxDimension;
+          width = maxDimension;
+        } else {
+          width = (width / height) * maxDimension;
+          height = maxDimension;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx?.drawImage(img, 0, 0, width, height);
+
+      let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+      let fileSizeKB = (compressedDataUrl.length * 3) / 4 / 1024; // Approximate size in KB
+
+      // Reduce quality until size is under target or quality is too low
+      let attempts = 0;
+      while (fileSizeKB > targetSizeKB && quality > 0.1 && attempts < 10) {
+        quality -= 0.05;
+        compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        fileSizeKB = (compressedDataUrl.length * 3) / 4 / 1024;
+        attempts++;
+      }
+
+      callback(compressedDataUrl);
+    };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -523,7 +682,7 @@ export default function StudentForm({
     const newErrors: any = {};
     let hasError = false;
 
-    const fieldsToValidate = ['studentScaleId', 'name', 'phone', 'email', 'events', 'date', 'overallAttendance'];
+    const fieldsToValidate = ['studentScaleId', 'name', 'phone', 'email', 'events', 'date', 'overallAttendance', 'specialisation', 'badge', 'photo'];
     fieldsToValidate.forEach(field => {
       const value = formData[field as keyof typeof formData];
       const error = validateField(field, value);
@@ -532,6 +691,13 @@ export default function StudentForm({
         hasError = true;
       }
     });
+
+    // Validate Aadhar (optional)
+    const aadharError = validateAadharNumber(formData.aadharNumber);
+    if (aadharError) {
+      newErrors.aadharNumber = aadharError;
+      hasError = true;
+    }
 
     if (formData.subjectWiseScores.length === 0) {
       newErrors.subjectWiseScores = "Please add at least one subject score";
@@ -549,7 +715,10 @@ export default function StudentForm({
 
     if (hasError) {
       setErrors(newErrors);
-      const allTouched = fieldsToValidate.reduce((acc, field) => ({ ...acc, [field]: true }), {});
+      const allTouched: any = fieldsToValidate.reduce((acc, field) => ({ ...acc, [field]: true }), {});
+      if (aadharError) {
+        allTouched.aadharNumber = true;
+      }
       setTouched(allTouched);
       toast.error("Please fix all validation errors before submitting.");
       return;
@@ -567,9 +736,13 @@ export default function StudentForm({
         trainerFeedback: formData.trainerFeedback,
         subjectWiseScores: formData.subjectWiseScores,
         events: formData.events,
-        date: formData.date, // Now contains the event date range
+        date: formData.date,
         overallScore: formData.overallScore,
         overallAttendance: formData.overallAttendance,
+        specialisation: formData.specialisation,
+        badge: formData.badge,
+        photo: formData.photo,
+        aadharNumber: formData.aadharNumber || undefined // Only send if provided
       };
 
       let response;
@@ -585,7 +758,6 @@ export default function StudentForm({
     } catch (error: any) {
       console.error("Submit error:", error);
 
-      // Handle different types of errors
       let errorMessage = `Failed to ${isEdit ? 'update' : 'create'} student.`;
 
       if (error.response) {
@@ -737,9 +909,9 @@ export default function StudentForm({
             value={formData.studentScaleId}
             onChange={(e) => handleFieldChange('studentScaleId', e.target.value)}
             onBlur={() => handleBlur('studentScaleId')}
-            className={`w-full px-3 uppercase  py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.studentScaleId && errors.studentScaleId
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
-                : 'border-gray-200'
+            className={`w-full px-3 uppercase py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.studentScaleId && errors.studentScaleId
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
+              : 'border-gray-200'
               }`}
             required
             disabled={loading || isSubmitting}
@@ -755,14 +927,19 @@ export default function StudentForm({
           <input
             type="text"
             value={formData.name}
-            onChange={(e) => handleFieldChange('name', e.target.value)}
+            onChange={(e) => {
+              // Only allow letters and spaces
+              const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+              handleFieldChange('name', value);
+            }}
             onBlur={() => handleBlur('name')}
-            className={`w-full px-3 py-2 text-sm border uppercase rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.name && errors.name
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
-                : 'border-gray-200'
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.name && errors.name
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
+              : 'border-gray-200'
               }`}
             required
             disabled={loading || isSubmitting}
+            placeholder="Enter full name (letters only)"
           />
           {touched.name && errors.name && (
             <p className="mt-1 text-xs text-red-600">{errors.name}</p>
@@ -784,8 +961,8 @@ export default function StudentForm({
             }}
             onBlur={() => handleBlur('phone')}
             className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.phone && errors.phone
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
-                : 'border-gray-200'
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
+              : 'border-gray-200'
               }`}
             placeholder="Enter 10 digit phone number"
             required
@@ -795,7 +972,7 @@ export default function StudentForm({
           {touched.phone && errors.phone && (
             <p className="mt-1 text-xs text-red-600">{errors.phone}</p>
           )}
-          <p className="mt-1 text-xs text-gray-500">Format: 10 digits only</p>
+          <p className="mt-1 text-xs text-gray-500">Must start with 6, 7, 8, or 9 • 10 digits only</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -807,8 +984,8 @@ export default function StudentForm({
             onChange={(e) => handleFieldChange('email', e.target.value)}
             onBlur={() => handleBlur('email')}
             className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.email && errors.email
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
-                : 'border-gray-200'
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
+              : 'border-gray-200'
               }`}
             placeholder="Enter valid email address"
             required
@@ -816,6 +993,137 @@ export default function StudentForm({
           />
           {touched.email && errors.email && (
             <p className="mt-1 text-xs text-red-600">{errors.email}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Aadhar Number - Optional */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Aadhar Number <span className="text-gray-400 text-xs">(Optional)</span>
+        </label>
+        <input
+          type="text"
+          value={formData.aadharNumber}
+          onChange={(e) => {
+            const value = e.target.value.replace(/\D/g, '').slice(0, 12);
+            handleFieldChange('aadharNumber', value);
+          }}
+          onBlur={() => handleBlur('aadharNumber')}
+          className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.aadharNumber && errors.aadharNumber
+            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
+            : 'border-gray-200'
+            }`}
+          placeholder="Enter 12 digit Aadhar number (optional)"
+          disabled={loading || isSubmitting}
+          maxLength={12}
+        />
+        {touched.aadharNumber && errors.aadharNumber && (
+          <p className="mt-1 text-xs text-red-600">{errors.aadharNumber}</p>
+        )}
+        <p className="mt-1 text-xs text-gray-500">12 digits only • Optional field</p>
+      </div>
+
+      {/* Specialisation and Badge */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Specialisation *
+          </label>
+          <select
+            value={formData.specialisation}
+            onChange={(e) => handleFieldChange('specialisation', e.target.value)}
+            onBlur={() => handleBlur('specialisation')}
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.specialisation && errors.specialisation
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
+              : 'border-gray-200'
+              }`}
+            required
+            disabled={loading || isSubmitting}
+          >
+            <option value="">Select Specialisation</option>
+            {SPECIALISATION_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          {touched.specialisation && errors.specialisation && (
+            <p className="mt-1 text-xs text-red-600">{errors.specialisation}</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Badge *
+          </label>
+          <select
+            value={formData.badge}
+            onChange={(e) => handleFieldChange('badge', e.target.value)}
+            onBlur={() => handleBlur('badge')}
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.badge && errors.badge
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
+              : 'border-gray-200'
+              }`}
+            required
+            disabled={loading || isSubmitting}
+          >
+            <option value="">Select Badge</option>
+            {BADGE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {touched.badge && errors.badge && (
+            <p className="mt-1 text-xs text-red-600">{errors.badge}</p>
+          )}
+          {formData.badge && (
+            <div className="mt-1">
+              <span className={`inline-block px-2 py-0.5 text-xs font-medium text-white rounded-full ${BADGE_OPTIONS.find(b => b.value === formData.badge)?.color || 'bg-gray-500'
+                }`}>
+                {BADGE_OPTIONS.find(b => b.value === formData.badge)?.label || formData.badge}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Photo Upload */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Student Photo *
+        </label>
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handlePhotoUpload}
+              accept="image/*"
+              className="hidden"
+              disabled={loading || isSubmitting}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading || isSubmitting}
+              className="w-full px-4 py-2 text-sm font-medium text-blue-900 border-2 border-blue-900 border-dashed rounded-lg hover:bg-blue-50 transition disabled:opacity-50"
+            >
+              {formData.photo ? "Change Photo" : "Upload Photo"}
+            </button>
+            <p className="mt-1 text-xs text-gray-500">Max size: 100KB (auto-compressed)</p>
+            {touched.photo && errors.photo && (
+              <p className="mt-1 text-xs text-red-600">{errors.photo}</p>
+            )}
+          </div>
+          {photoPreview && (
+            <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+              <img
+                src={photoPreview}
+                alt="Student"
+                className="w-full h-full object-cover"
+              />
+            </div>
           )}
         </div>
       </div>
@@ -958,7 +1266,8 @@ export default function StudentForm({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Overall Score (Auto-calculated)
           </label>
-          <input type="number"
+          <input
+            type="number"
             value={formData.overallScore}
             className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none"
             min="0"
@@ -978,8 +1287,8 @@ export default function StudentForm({
             onChange={(e) => handleFieldChange('overallAttendance', parseFloat(e.target.value) || 0)}
             onBlur={() => handleBlur('overallAttendance')}
             className={`w-full px-3 py-2 text-sm border rounded-lg focus:border-blue-900 focus:ring-2 focus:ring-blue-900/10 outline-none ${touched.overallAttendance && errors.overallAttendance
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
-                : 'border-gray-200'
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10'
+              : 'border-gray-200'
               }`}
             min="0"
             max="100"

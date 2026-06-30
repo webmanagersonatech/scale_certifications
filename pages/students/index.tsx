@@ -12,7 +12,8 @@ import {
   Student,
   generateStudentQR,
   regenerateStudentQR,
-  downloadStudentQR
+  downloadStudentQR,
+  exportStudents
 } from "@/lib/request/studentRequest";
 import { toast } from "react-toastify";
 
@@ -37,6 +38,9 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [distinctEvents, setDistinctEvents] = useState<DistinctEvent[]>([]);
+  const [exportData, setExportData] = useState<any[]>([]);
+  const [exportLoading, setExportLoading] = useState(false);
+
   const [pagination, setPagination] = useState({
     totalDocs: 0,
     totalPages: 0,
@@ -59,10 +63,12 @@ export default function StudentsPage() {
     "Email",
     "Phone",
     "Event",
-    "Date",
+    "Specialisation",
+    "Badge",
     "Overall Score",
     "Overall Attendance",
     "Subjects Count",
+    "Aadhar Number",
     "QR Code"
   ];
 
@@ -72,13 +78,54 @@ export default function StudentsPage() {
     email: "Email",
     phone: "Phone",
     events: "Event",
-    date: "Date",
+    specialisation: "Specialisation",
+    badge: "Badge",
     overallScore: "Overall Score",
     overallAttendance: "Overall Attendance",
     subjectWiseScores: "Subjects Count",
+    aadharNumber: "Aadhar Number",
     qrCode: "QR Code"
   };
+  const handleExport = async () => {
+    try {
+      setExportLoading(true);
 
+      const response = await exportStudents({
+        search,
+        event: filters.event !== "all" ? filters.event : undefined,
+        dateRange: filters.dateRange !== "all" ? filters.dateRange : undefined,
+      });
+
+      if (response.success) {
+        const data = response.students.map((student: any) => ({
+          _id: student._id,
+          studentScaleId: student.studentScaleId,
+          name: student.name,
+          phone: student.phone,
+          email: student.email,
+          events: student.events,
+          specialisation: student.specialisation || "N/A",
+          badge: student.badge
+            ? student.badge.charAt(0).toUpperCase() + student.badge.slice(1)
+            : "N/A",
+          subjectWiseScores: student.subjectWiseScores?.length || 0,
+          overallScore: student.overallScore?.toFixed(1) || 0,
+          overallAttendance: student.overallAttendance,
+          aadharNumber: student.aadharNumber || "N/A",
+          qrCode: student.qrCode || "",
+          createdAt: student.createdAt,
+          updatedAt: student.updatedAt,
+        }));
+
+        setExportData(data);
+        setIsExportModalOpen(true);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch export data");
+    } finally {
+      setExportLoading(false);
+    }
+  };
   // Prepare data for export
   const getExportData = useCallback(() => {
     return students.map((student) => ({
@@ -88,10 +135,12 @@ export default function StudentsPage() {
       phone: student.phone,
       email: student.email,
       events: student.events,
-      date: student.date || "",
+      specialisation: student.specialisation || "N/A",
+      badge: student.badge ? student.badge.charAt(0).toUpperCase() + student.badge.slice(1) : "N/A",
       subjectWiseScores: student.subjectWiseScores?.length || 0,
       overallScore: student.overallScore?.toFixed(1) || 0,
       overallAttendance: student.overallAttendance,
+      aadharNumber: student.aadharNumber || "N/A",
       qrCode: student.qrCode || "",
       createdAt: student.createdAt,
       updatedAt: student.updatedAt,
@@ -102,7 +151,7 @@ export default function StudentsPage() {
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
-      const response:any = await getAllStudents({
+      const response: any = await getAllStudents({
         page: currentPage,
         limit: PAGE_SIZE,
         search: search,
@@ -238,9 +287,9 @@ export default function StudentsPage() {
 
   const handleResetFilters = useCallback(() => {
     setSearch("");
-    setFilters({ 
+    setFilters({
       event: "all",
-      dateRange: "" 
+      dateRange: ""
     });
     setCurrentPage(1);
   }, []);
@@ -264,9 +313,19 @@ export default function StudentsPage() {
       header: "Student",
       render: (_: any, row: Student) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {row.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-          </div>
+          {row.photo ? (
+            <div className="w-9 h-9 rounded-full overflow-hidden border border-gray-200 flex-shrink-0">
+              <img
+                src={row.photo}
+                alt={row.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              {row.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            </div>
+          )}
           <div>
             <p className="font-semibold text-gray-800">{row.name}</p>
             <p className="text-gray-400 text-xs">{row.email}</p>
@@ -292,21 +351,42 @@ export default function StudentsPage() {
       ),
     },
     {
-      key: "date",
-      header: "Date Range",
+      key: "specialisation",
+      header: "Specialisation",
       sortable: true,
       render: (value: string) => (
-        <span className="text-sm text-gray-600 whitespace-nowrap">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
           {value || 'N/A'}
         </span>
       ),
+    },
+    {
+      key: "badge",
+      header: "Badge",
+      sortable: true,
+      render: (value: string) => {
+        const badgeMap: Record<string, { label: string; color: string; icon: string }> = {
+          gold: { label: 'Gold', color: 'bg-yellow-500', icon: '🥇' },
+          silver: { label: 'Silver', color: 'bg-gray-400', icon: '🥈' },
+          bronze: { label: 'Bronze', color: 'bg-amber-600', icon: '🥉' }
+        };
+        const badge = badgeMap[value];
+        return badge ? (
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-white ${badge.color}`}>
+            <span>{badge.icon}</span>
+            {badge.label}
+          </span>
+        ) : (
+          <span className="text-sm text-gray-500">N/A</span>
+        );
+      },
     },
     {
       key: "subjectWiseScores",
       header: "Subjects",
       render: (value: any[]) => (
         <span className="text-sm text-gray-600">
-          {value?.length || 0} subjects
+          {value?.length || 0}
         </span>
       ),
     },
@@ -341,6 +421,7 @@ export default function StudentsPage() {
       header: "Phone",
       hideOnTablet: true,
     },
+
     {
       key: "qrCode",
       header: "QR Code",
@@ -425,10 +506,21 @@ export default function StudentsPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsExportModalOpen(true)}
-              className="flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition"
+              onClick={handleExport}
+              disabled={exportLoading}
+              className="flex items-center gap-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition disabled:opacity-50"
             >
-              <Download className="w-4 h-4" /> Export
+              {exportLoading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Export
+                </>
+              )}
             </button>
             <button
               onClick={() => setIsAddModalOpen(true)}
@@ -460,9 +552,9 @@ export default function StudentsPage() {
           <select
             value={filters.event}
             onChange={(e) => {
-              setFilters({ 
-                ...filters, 
-                event: e.target.value 
+              setFilters({
+                ...filters,
+                event: e.target.value
               });
               setCurrentPage(1);
             }}
@@ -484,9 +576,9 @@ export default function StudentsPage() {
           <select
             value={filters.dateRange}
             onChange={(e) => {
-              setFilters({ 
-                ...filters, 
-                dateRange: e.target.value 
+              setFilters({
+                ...filters,
+                dateRange: e.target.value
               });
               setCurrentPage(1);
             }}
@@ -509,7 +601,7 @@ export default function StudentsPage() {
           </button>
         </div>
 
-     
+
         {/* Data Table */}
         <DataTable
           columns={columns}
@@ -593,7 +685,7 @@ export default function StudentsPage() {
       <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        data={getExportData()}
+        data={exportData}
         filename="students"
         headers={exportHeaders}
         mapping={exportMapping}
@@ -638,6 +730,7 @@ export default function StudentsPage() {
       </Modal>
 
       {/* View Student Details Modal */}
+      {/* View Student Details Modal */}
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => {
@@ -649,32 +742,65 @@ export default function StudentsPage() {
       >
         {selectedStudent && (
           <div className="space-y-4">
+            {/* Profile Header with Photo */}
+            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+              {selectedStudent.photo ? (
+                <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-blue-900 flex-shrink-0">
+                  <img
+                    src={selectedStudent.photo}
+                    alt={selectedStudent.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                  {selectedStudent.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                </div>
+              )}
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">{selectedStudent.name}</h3>
+                <p className="text-sm text-gray-500">{selectedStudent.email}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {selectedStudent.badge && (
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium text-white ${selectedStudent.badge === 'gold' ? 'bg-yellow-500' :
+                      selectedStudent.badge === 'silver' ? 'bg-gray-400' :
+                        'bg-amber-600'
+                      }`}>
+                      {selectedStudent.badge === 'gold' && '🥇'}
+                      {selectedStudent.badge === 'silver' && '🥈'}
+                      {selectedStudent.badge === 'bronze' && '🥉'}
+                      {selectedStudent.badge.charAt(0).toUpperCase() + selectedStudent.badge.slice(1)}
+                    </span>
+                  )}
+                  {selectedStudent.specialisation && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {selectedStudent.specialisation}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-gray-500 font-medium">Student Scale ID</label>
                 <p className="text-sm font-mono text-gray-900">{selectedStudent.studentScaleId}</p>
               </div>
               <div>
-                <label className="text-xs text-gray-500 font-medium">Full Name</label>
-                <p className="text-sm font-semibold text-gray-900">{selectedStudent.name}</p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 font-medium">Email</label>
-                <p className="text-sm text-gray-900">{selectedStudent.email}</p>
-              </div>
-              <div>
                 <label className="text-xs text-gray-500 font-medium">Phone</label>
                 <p className="text-sm text-gray-900">{selectedStudent.phone}</p>
               </div>
               <div>
-                <label className="text-xs text-gray-500 font-medium">Event</label>
-                <p className="text-sm text-gray-900">{selectedStudent.events}</p>
+                <label className="text-xs text-gray-500 font-medium">Aadhar Number</label>
+                <p className="text-sm font-mono text-gray-900">
+                  {selectedStudent.aadharNumber ?
+                    selectedStudent.aadharNumber.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3') :
+                    'N/A'}
+                </p>
               </div>
               <div>
-                <label className="text-xs text-gray-500 font-medium">Date Range</label>
-                <p className="text-sm text-gray-900">
-                  {selectedStudent.date}
-                </p>
+                <label className="text-xs text-gray-500 font-medium">Event</label>
+                <p className="text-sm text-gray-900">{selectedStudent.events}</p>
               </div>
               <div>
                 <label className="text-xs text-gray-500 font-medium">Overall Score</label>

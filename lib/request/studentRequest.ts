@@ -8,6 +8,11 @@ export interface SubjectWiseScore {
   subjectName: string;
   score: number;
 }
+export interface ExportStudentsResponse {
+  success: boolean;
+  count: number;
+  students: Student[];
+}
 
 export interface Student {
   _id?: string;
@@ -15,18 +20,22 @@ export interface Student {
   name: string;
   phone: string;
   email: string;
+  specialisation: string; // Added
+  aadharNumber?: string; // Added - optional
+  badge: string; // Added
+  photoUrl?: string; // Added - optional (for the photo URL from server)
   studentFeedback?: string;
   trainerFeedback?: string;
   subjectWiseScores: SubjectWiseScore[];
   events: string;
   date: string;
   qrCode?: string;
+  photo?: string;
   overallScore: number;
   overallAttendance: number;
   createdAt?: string;
   updatedAt?: string;
 }
-
 export interface StudentsResponse {
   success: boolean;
   students: {
@@ -227,7 +236,31 @@ export async function getAllStudents({
     );
   }
 }
+export async function exportStudents({
+  search = "",
+  event = "",
+  dateRange = "",
+}: {
+  search?: string;
+  event?: string;
+  dateRange?: string;
+}) {
+  try {
+    const response = await api.get<ExportStudentsResponse>("/students/export", {
+      params: {
+        search: search.trim(),
+        event: event || undefined,
+        dateRange: dateRange || undefined,
+      },
+    });
 
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Failed to export students."
+    );
+  }
+}
 // Get Student by ID
 export async function getStudentById(id: string) {
   try {
