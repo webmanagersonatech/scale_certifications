@@ -188,7 +188,7 @@ export default function CertificationSlugPage() {
                 </svg>
                 <div>
                   <p className="text-xs text-gray-500">Date</p>
-                  <p className="text-sm text-gray-900">{formatDate(student.date)}</p>
+                  <p className="text-sm text-gray-900">{student.date}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3 p-3 bg-purple-50 rounded">
